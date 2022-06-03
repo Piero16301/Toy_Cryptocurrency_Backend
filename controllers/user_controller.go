@@ -207,7 +207,16 @@ func VerifySecurityCodeLogin() http.HandlerFunc {
 		response := responses.UserResponse{
 			Status:  http.StatusOK,
 			Message: "Usuario logeado con éxito",
-			Data:    dbUser,
+			Data: models.User{
+				Id:         dbUser.Id,
+				FirstName:  dbUser.FirstName,
+				LastName:   dbUser.LastName,
+				Country:    dbUser.Country,
+				Email:      dbUser.Email,
+				Password:   "",
+				PublicKey:  dbUser.PublicKey,
+				PrivateKey: dbUser.PrivateKey,
+			},
 		}
 		_ = json.NewEncoder(writer).Encode(response)
 		fmt.Printf("Código verificado, usuario %s logeado con éxito\n", user.Email)
@@ -379,12 +388,14 @@ func VerifySecurityCodeRegister() http.HandlerFunc {
 
 		// Crear modelo de usuario con sus campos completos
 		newUser := models.User{
-			Id:        primitive.NewObjectID(),
-			FirstName: user.FirstName,
-			LastName:  user.LastName,
-			Country:   user.Country,
-			Email:     user.Email,
-			Password:  user.Password,
+			Id:         primitive.NewObjectID(),
+			FirstName:  user.FirstName,
+			LastName:   user.LastName,
+			Country:    user.Country,
+			Email:      user.Email,
+			Password:   user.Password,
+			PublicKey:  user.PublicKey,
+			PrivateKey: user.PrivateKey,
 		}
 		_, err = userCollection.InsertOne(ctx, newUser)
 		if err != nil {
