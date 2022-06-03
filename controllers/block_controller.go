@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-var blockCollection = configs.GetCollection(configs.DB, "blocks")
+var blockCollection = configs.GetCollection(configs.DB, "Blockchain")
 var validateTransaction = validator.New()
 
 func NewTransaction() http.HandlerFunc {

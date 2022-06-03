@@ -14,8 +14,11 @@ func main() {
 	// Establecer conexión con MongoDB
 	configs.ConnectDB()
 
-	// Rutas de bloques
+	// Rutas de Blockchain
 	routes.BlockRoute(router)
+
+	// Rutas de Users
+	routes.UserRoute(router)
 
 	log.Fatal(http.ListenAndServe(":80", router))
 }
