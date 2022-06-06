@@ -98,7 +98,7 @@ func SendSecurityCodeLogin() http.HandlerFunc {
 		message.SetHeader("From", message.FormatAddress("eim.messages.app@gmail.com", "Toy Cryptocurrency"))
 		message.SetHeader("To", user.Email)
 		message.SetHeader("Subject", "Código de autorización Toy Cryptocurrency")
-		emailContent := "<p>Hola <b>" + tempUser.FirstName + " " + tempUser.LastName + "</b>,</p><p>Tu código de verificación se encuentra adjunto como imagen en este correo.</p><p>No compartas este código con nadie.</p><p><b>Equipo de Toy Cryptocurrency</b></p>"
+		emailContent := "<p>Hola <b>" + tempUser.Email + "</b>,</p><p>Tu código de verificación se encuentra adjunto como imagen en este correo.</p><p>No compartas este código con nadie.</p><p><b>Equipo de Toy Cryptocurrency</b></p>"
 		message.SetBody("text/html", emailContent)
 		message.Attach(securityCodeUserImageRoute)
 		dialer := gomail.NewDialer("smtp.gmail.com", 587, "eim.messages.app@gmail.com", "qwe123***")
@@ -286,7 +286,7 @@ func SendSecurityCodeRegister() http.HandlerFunc {
 		message.SetHeader("From", message.FormatAddress("eim.messages.app@gmail.com", "Toy Cryptocurrency"))
 		message.SetHeader("To", user.Email)
 		message.SetHeader("Subject", "Código de autorización Toy Cryptocurrency")
-		emailContent := "<p>Hola <b>" + user.FirstName + " " + user.LastName + "</b>,</p><p>Tu código de verificación se encuentra adjunto como imagen en este correo.</p><p>No compartas este código con nadie.</p><p><b>Equipo de Toy Cryptocurrency</b></p>"
+		emailContent := "<p>Hola <b>" + user.Email + "</b>,</p><p>Tu código de verificación se encuentra adjunto como imagen en este correo.</p><p>No compartas este código con nadie.</p><p><b>Equipo de Toy Cryptocurrency</b></p>"
 		message.SetBody("text/html", emailContent)
 		message.Attach(securityCodeUserImageRoute)
 		dialer := gomail.NewDialer("smtp.gmail.com", 587, "eim.messages.app@gmail.com", "qwe123***")
