@@ -388,14 +388,15 @@ func VerifySecurityCodeRegister() http.HandlerFunc {
 
 		// Crear modelo de usuario con sus campos completos
 		newUser := models.User{
-			Id:         primitive.NewObjectID(),
-			FirstName:  user.FirstName,
-			LastName:   user.LastName,
-			Country:    user.Country,
-			Email:      user.Email,
-			Password:   user.Password,
-			PublicKey:  user.PublicKey,
-			PrivateKey: user.PrivateKey,
+			Id:                  primitive.NewObjectID(),
+			FirstName:           user.FirstName,
+			LastName:            user.LastName,
+			Country:             user.Country,
+			Email:               user.Email,
+			Password:            user.Password,
+			PublicKey:           user.PublicKey,
+			PrivateKey:          user.PrivateKey,
+			PrivateKeyEncrypted: user.PrivateKeyEncrypted,
 		}
 		_, err = userCollection.InsertOne(ctx, newUser)
 		if err != nil {
