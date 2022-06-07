@@ -95,13 +95,13 @@ func SendSecurityCodeLogin() http.HandlerFunc {
 
 		// Enviar correo con el código de verificación
 		message := gomail.NewMessage()
-		message.SetHeader("From", message.FormatAddress("eim.messages.app@gmail.com", "Toy Cryptocurrency"))
+		message.SetHeader("From", message.FormatAddress("toy.cryptocurrency@gmail.com", "Toy Cryptocurrency"))
 		message.SetHeader("To", user.Email)
 		message.SetHeader("Subject", "Código de autorización Toy Cryptocurrency")
 		emailContent := "<p>Hola <b>" + tempUser.Email + "</b>,</p><p>Tu código de verificación se encuentra adjunto como imagen en este correo.</p><p>No compartas este código con nadie.</p><p><b>Equipo de Toy Cryptocurrency</b></p>"
 		message.SetBody("text/html", emailContent)
 		message.Attach(securityCodeUserImageRoute)
-		dialer := gomail.NewDialer("smtp.gmail.com", 587, "eim.messages.app@gmail.com", "qwe123***")
+		dialer := gomail.NewDialer("smtp.gmail.com", 587, "toy.cryptocurrency@gmail.com", "aihulcizgjoxwqwr")
 		if err := dialer.DialAndSend(message); err != nil {
 			writer.WriteHeader(http.StatusInternalServerError)
 			response := responses.UserResponse{
@@ -283,13 +283,13 @@ func SendSecurityCodeRegister() http.HandlerFunc {
 
 		// Enviar correo con el código de verificación
 		message := gomail.NewMessage()
-		message.SetHeader("From", message.FormatAddress("eim.messages.app@gmail.com", "Toy Cryptocurrency"))
+		message.SetHeader("From", message.FormatAddress("toy.cryptocurrency@gmail.com", "Toy Cryptocurrency"))
 		message.SetHeader("To", user.Email)
 		message.SetHeader("Subject", "Código de autorización Toy Cryptocurrency")
 		emailContent := "<p>Hola <b>" + user.Email + "</b>,</p><p>Tu código de verificación se encuentra adjunto como imagen en este correo.</p><p>No compartas este código con nadie.</p><p><b>Equipo de Toy Cryptocurrency</b></p>"
 		message.SetBody("text/html", emailContent)
 		message.Attach(securityCodeUserImageRoute)
-		dialer := gomail.NewDialer("smtp.gmail.com", 587, "eim.messages.app@gmail.com", "qwe123***")
+		dialer := gomail.NewDialer("smtp.gmail.com", 587, "toy.cryptocurrency@gmail.com", "aihulcizgjoxwqwr")
 		if err := dialer.DialAndSend(message); err != nil {
 			writer.WriteHeader(http.StatusInternalServerError)
 			response := responses.UserResponse{
