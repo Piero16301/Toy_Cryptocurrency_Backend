@@ -6,18 +6,23 @@ import (
 	"Toy_Cryptocurrency/models"
 	"Toy_Cryptocurrency/responses"
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/go-playground/validator/v10"
-	"github.com/gorilla/mux"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"gopkg.in/gomail.v2"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"runtime"
 	"time"
+
+	"github.com/go-playground/validator/v10"
+	"github.com/gorilla/mux"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"gopkg.in/gomail.v2"
 )
 
 var userCollection = configs.GetCollection(configs.DB, "Users")
@@ -386,17 +391,34 @@ func VerifySecurityCodeRegister() http.HandlerFunc {
 			return
 		}
 
+		// Crear llaves pública y privada
+		privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+		if err != nil {
+			writer.WriteHeader(http.StatusInternalServerError)
+			response := responses.UserResponse{
+				Status:  http.StatusInternalServerError,
+				Message: "Error al generar la llave privada",
+				Data:    err.Error(),
+			}
+			_ = json.NewEncoder(writer).Encode(response)
+			return
+		}
+		publicKey := &privateKey.PublicKey
+
+		// Convertir llaves a string
+		privateKeyString := base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PrivateKey(privateKey))
+		publicKeyString := base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PublicKey(publicKey))
+
 		// Crear modelo de usuario con sus campos completos
 		newUser := models.User{
-			Id:                  primitive.NewObjectID(),
-			FirstName:           user.FirstName,
-			LastName:            user.LastName,
-			Country:             user.Country,
-			Email:               user.Email,
-			Password:            user.Password,
-			PublicKey:           user.PublicKey,
-			PrivateKey:          user.PrivateKey,
-			PrivateKeyEncrypted: user.PrivateKeyEncrypted,
+			Id:         primitive.NewObjectID(),
+			FirstName:  user.FirstName,
+			LastName:   user.LastName,
+			Country:    user.Country,
+			Email:      user.Email,
+			Password:   user.Password,
+			PublicKey:  publicKeyString,
+			PrivateKey: privateKeyString,
 		}
 		_, err = userCollection.InsertOne(ctx, newUser)
 		if err != nil {
@@ -417,7 +439,7 @@ func VerifySecurityCodeRegister() http.HandlerFunc {
 		response := responses.UserResponse{
 			Status:  http.StatusCreated,
 			Message: "Usuario registrado con éxito",
-			Data:    map[string]interface{}{"InsertedID": dbUser.Id},
+			Data:    dbUser,
 		}
 		_ = json.NewEncoder(writer).Encode(response)
 		fmt.Printf("Código verificado, usuario %s registrado con éxito\n", user.Email)
