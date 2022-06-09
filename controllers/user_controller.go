@@ -22,6 +22,7 @@ import (
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"gopkg.in/gomail.v2"
 )
 
@@ -443,5 +444,65 @@ func VerifySecurityCodeRegister() http.HandlerFunc {
 		}
 		_ = json.NewEncoder(writer).Encode(response)
 		fmt.Printf("Código verificado, usuario %s registrado con éxito\n", user.Email)
+	}
+}
+
+func GetAvailableUsers() http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "application/json; charset=utf-8")
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		params := mux.Vars(request)
+		userEmail := params["userEmail"]
+		var users []models.User
+		defer cancel()
+
+		results, err := userCollection.Find(ctx, bson.M{"email": bson.M{"$nin": bson.A{userEmail}}})
+
+		if err != nil {
+			writer.WriteHeader(http.StatusInternalServerError)
+			response := responses.UserResponse{
+				Status:  http.StatusInternalServerError,
+				Message: "Error al obtener usuarios disponibles",
+				Data:    err.Error(),
+			}
+			_ = json.NewEncoder(writer).Encode(response)
+			return
+		}
+
+		defer func(results *mongo.Cursor, ctx context.Context) {
+			_ = results.Close(ctx)
+		}(results, ctx)
+
+		for results.Next(ctx) {
+			var singleUser models.User
+			if err := results.Decode(&singleUser); err != nil {
+				writer.WriteHeader(http.StatusInternalServerError)
+				response := responses.UserResponse{
+					Status:  http.StatusInternalServerError,
+					Message: "Resultados no tienen la estructura usuario",
+					Data:    err.Error(),
+				}
+				_ = json.NewEncoder(writer).Encode(response)
+			}
+			users = append(users, models.User{
+				Id:         singleUser.Id,
+				FirstName:  singleUser.FirstName,
+				LastName:   singleUser.LastName,
+				Country:    singleUser.Country,
+				Email:      singleUser.Email,
+				Password:   "",
+				PublicKey:  singleUser.PublicKey,
+				PrivateKey: "",
+			})
+		}
+
+		writer.WriteHeader(http.StatusOK)
+		response := responses.UserResponse{
+			Status:  http.StatusOK,
+			Message: "Usuarios obtenidos con éxito",
+			Data:    users,
+		}
+		_ = json.NewEncoder(writer).Encode(response)
+		fmt.Printf("Usuarios disponibles para el usuario %s obtenidos con éxito\n", userEmail)
 	}
 }
