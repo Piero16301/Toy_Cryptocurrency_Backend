@@ -189,7 +189,7 @@ func VerifySecurityCodeLogin() http.HandlerFunc {
 		} else {
 			securityCodeImageRoute = "/home/piero/Encrypted_Instant_Messaging_Backend/security_codes/users_codes_images/" + user.Email + ".png"
 		}
-		err = os.Remove(securityCodeTxtRoute)
+		_ = os.Remove(securityCodeTxtRoute)
 		err = os.Remove(securityCodeImageRoute)
 
 		// Si no están los archivos, significa que no se ha solicitado un código de seguridad
@@ -377,7 +377,7 @@ func VerifySecurityCodeRegister() http.HandlerFunc {
 		} else {
 			securityCodeImageRoute = "/home/piero/Encrypted_Instant_Messaging_Backend/security_codes/users_codes_images/" + user.Email + ".png"
 		}
-		err = os.Remove(securityCodeTxtRoute)
+		_ = os.Remove(securityCodeTxtRoute)
 		err = os.Remove(securityCodeImageRoute)
 
 		// Si no están los archivos, significa que no se ha solicitado un código de seguridad

@@ -1,8 +1,9 @@
 package models
 
 import (
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Block struct {
@@ -12,5 +13,6 @@ type Block struct {
 	Proof        int                `json:"proof,omitempty"`
 	Timestamp    time.Time          `json:"timestamp,omitempty"`
 	Miner        string             `json:"miner,omitempty"`
+	Signature    string             `json:"signature,omitempty"`
 	Transaction  Transaction        `json:"transaction,omitempty"`
 }

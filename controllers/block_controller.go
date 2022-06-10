@@ -8,13 +8,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"net/http"
-	"strings"
-	"time"
 )
 
 var blockCollection = configs.GetCollection(configs.DB, "Blockchain")
@@ -51,11 +52,39 @@ func NewTransaction() http.HandlerFunc {
 			return
 		}
 
+		// Obtener llave privada de la cuenta del usuario
+		var userFrom models.User
+		err := userCollection.FindOne(ctx, bson.M{"email": transaction.From}).Decode(&userFrom)
+		if err != nil {
+			writer.WriteHeader(http.StatusBadRequest)
+			response := responses.BlockResponse{
+				Status:  http.StatusBadRequest,
+				Message: "El usuario de origen no existe",
+				Data:    err.Error(),
+			}
+			_ = json.NewEncoder(writer).Encode(response)
+			return
+		}
+
+		// Validar que la firma sea válida
+		stringSignature := request.URL.Query().Get("signature")
+		stringSignature = strings.Replace(stringSignature, " ", "+", -1) // Reemplazar caracteres " " por "+"
+
+		stringPrivateKey := userFrom.PrivateKey
+		if !functions.ValidateSignature(stringPrivateKey, stringSignature) {
+			writer.WriteHeader(http.StatusBadRequest)
+			response := responses.BlockResponse{
+				Status:  http.StatusBadRequest,
+				Message: "Firma inválida",
+				Data:    "Firma inválida",
+			}
+			_ = json.NewEncoder(writer).Encode(response)
+			return
+		}
+
 		// Obtener cadena de bloques de la base de datos
 		var blocks []models.Block
-
 		results, err := blockCollection.Find(ctx, bson.M{})
-
 		if err != nil {
 			writer.WriteHeader(http.StatusInternalServerError)
 			response := responses.BlockResponse{
@@ -71,7 +100,6 @@ func NewTransaction() http.HandlerFunc {
 		defer func(results *mongo.Cursor, ctx context.Context) {
 			_ = results.Close(ctx)
 		}(results, ctx)
-
 		for results.Next(ctx) {
 			var singleBlock models.Block
 			if err = results.Decode(&singleBlock); err != nil {
@@ -87,7 +115,7 @@ func NewTransaction() http.HandlerFunc {
 		}
 
 		// Configuración de zona horaria
-		timeZone, err := time.LoadLocation("America/Lima")
+		timeZone, _ := time.LoadLocation("America/Lima")
 
 		// Se realiza el proof of work (minado) SHA256 (64 bytes)
 		previousBlock := blocks[len(blocks)-1]
@@ -102,6 +130,7 @@ func NewTransaction() http.HandlerFunc {
 			Proof:        proofOfWork,
 			Timestamp:    time.Now().In(timeZone),
 			Miner:        functions.EncryptSHA256String(functions.GetMacAddress()),
+			Signature:    stringSignature,
 			Transaction: models.Transaction{
 				From:   transaction.From,
 				To:     transaction.To,

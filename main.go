@@ -3,9 +3,10 @@ package main
 import (
 	"Toy_Cryptocurrency/configs"
 	"Toy_Cryptocurrency/routes"
-	"github.com/gorilla/mux"
 	"log"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 func main() {
