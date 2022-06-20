@@ -581,3 +581,60 @@ func GetAvailableUsers() http.HandlerFunc {
 		fmt.Printf("Usuarios disponibles para el usuario %s obtenidos con éxito\n", userEmail)
 	}
 }
+
+func GetBalance() http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "application/json; charset=utf-8")
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		params := mux.Vars(request)
+		userEmail := params["userEmail"]
+		defer cancel()
+
+		results, err := blockCollection.Find(ctx, bson.M{})
+
+		if err != nil {
+			writer.WriteHeader(http.StatusInternalServerError)
+			response := responses.BlockResponse{
+				Status:  http.StatusInternalServerError,
+				Message: "No se ha podido leer la cadena de bloques",
+				Data:    err.Error(),
+			}
+			_ = json.NewEncoder(writer).Encode(response)
+			return
+		}
+
+		// Lectura de resultados de bloques
+		defer func(results *mongo.Cursor, ctx context.Context) {
+			_ = results.Close(ctx)
+		}(results, ctx)
+
+		var balance float64 = 0.00
+		for results.Next(ctx) {
+			var singleBlock models.Block
+			if err = results.Decode(&singleBlock); err != nil {
+				writer.WriteHeader(http.StatusInternalServerError)
+				response := responses.BlockResponse{
+					Status:  http.StatusInternalServerError,
+					Message: "Error al leer bloque",
+					Data:    err.Error(),
+				}
+				_ = json.NewEncoder(writer).Encode(response)
+			}
+			if singleBlock.Transaction.From == userEmail {
+				balance -= singleBlock.Transaction.Amount
+			}
+			if singleBlock.Transaction.To == userEmail {
+				balance += singleBlock.Transaction.Amount
+			}
+		}
+
+		writer.WriteHeader(http.StatusOK)
+		response := responses.UserResponse{
+			Status:  http.StatusOK,
+			Message: "Balance obtenido con éxito",
+			Data:    map[string]interface{}{"balance": balance},
+		}
+		_ = json.NewEncoder(writer).Encode(response)
+		fmt.Printf("Balance del usuario %s obtenido con éxito\n", userEmail)
+	}
+}

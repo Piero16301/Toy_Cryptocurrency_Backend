@@ -12,4 +12,5 @@ func UserRoute(router *mux.Router) {
 	router.HandleFunc("/sendSecurityCodeRegister", controllers.SendSecurityCodeRegister()).Methods("POST")
 	router.HandleFunc("/verifySecurityCodeRegister/{securityCode}", controllers.VerifySecurityCodeRegister()).Methods("POST")
 	router.HandleFunc("/getAvailableUsers/{userEmail}", controllers.GetAvailableUsers()).Methods("GET")
+	router.HandleFunc("/getBalance/{userEmail}", controllers.GetBalance()).Methods("GET")
 }
