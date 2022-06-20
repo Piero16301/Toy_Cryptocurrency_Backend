@@ -6,8 +6,10 @@ import (
 	"Toy_Cryptocurrency/models"
 	"Toy_Cryptocurrency/responses"
 	"context"
+	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -427,6 +429,79 @@ func VerifySecurityCodeRegister() http.HandlerFunc {
 			response := responses.UserResponse{
 				Status:  http.StatusInternalServerError,
 				Message: "Error al registrar el nuevo usuario",
+				Data:    err.Error(),
+			}
+			_ = json.NewEncoder(writer).Encode(response)
+			return
+		}
+
+		// Obtener cadena de bloques de la base de datos
+		var blocks []models.Block
+		results, err := blockCollection.Find(ctx, bson.M{})
+		if err != nil {
+			writer.WriteHeader(http.StatusInternalServerError)
+			response := responses.BlockResponse{
+				Status:  http.StatusInternalServerError,
+				Message: "Error al leer la base de datos",
+				Data:    err.Error(),
+			}
+			_ = json.NewEncoder(writer).Encode(response)
+			return
+		}
+		defer func(results *mongo.Cursor, ctx context.Context) {
+			_ = results.Close(ctx)
+		}(results, ctx)
+		for results.Next(ctx) {
+			var singleBlock models.Block
+			if err = results.Decode(&singleBlock); err != nil {
+				writer.WriteHeader(http.StatusInternalServerError)
+				response := responses.BlockResponse{
+					Status:  http.StatusInternalServerError,
+					Message: "Error al leer la base de datos",
+					Data:    err.Error(),
+				}
+				_ = json.NewEncoder(writer).Encode(response)
+			}
+			blocks = append(blocks, singleBlock)
+		}
+
+		// Datos de la transacción
+		timeZone, _ := time.LoadLocation("America/Lima")
+		previousBlock := blocks[len(blocks)-1]
+		proofOfWork := functions.GetProofOfWork(previousBlock.Proof)
+		hashPreviousBlock := functions.EncryptSHA256Block(previousBlock)
+
+		// Crear firma del usuario registrado
+		message := []byte("bloque firmado")
+		messageHash := sha256.New()
+		_, _ = messageHash.Write(message)
+		messageHashSum := messageHash.Sum(nil)
+		signature, err := rsa.SignPKCS1v15(rand.Reader, privateKey, crypto.SHA256, messageHashSum)
+
+		// Transferir 100.00 a la cuenta del usuario registrado
+		newBlock := models.Block{
+			Id:           primitive.NewObjectID(),
+			Index:        len(blocks) + 1,
+			PreviousHash: hashPreviousBlock,
+			Proof:        proofOfWork,
+			Timestamp:    time.Now().In(timeZone),
+			Miner:        functions.EncryptSHA256String(functions.GetMacAddress()),
+			Signature:    base64.StdEncoding.EncodeToString(signature),
+			Transaction: models.Transaction{
+				From:   functions.EncryptSHA256String(functions.GetMacAddress()),
+				To:     user.Email,
+				Amount: 100.00,
+				Fee:    5.00,
+			},
+		}
+
+		// Se inserta nuevo bloque en la base de datos
+		_, err = blockCollection.InsertOne(ctx, newBlock)
+		if err != nil {
+			writer.WriteHeader(http.StatusInternalServerError)
+			response := responses.BlockResponse{
+				Status:  http.StatusInternalServerError,
+				Message: "Error al insertar nuevo bloque en la cadena",
 				Data:    err.Error(),
 			}
 			_ = json.NewEncoder(writer).Encode(response)

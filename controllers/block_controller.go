@@ -68,7 +68,8 @@ func NewTransaction() http.HandlerFunc {
 
 		// Validar que la firma sea válida
 		stringSignature := request.URL.Query().Get("signature")
-		stringSignature = strings.Replace(stringSignature, " ", "+", -1) // Reemplazar caracteres " " por "+"
+		// Reemplazar caracteres " " por "+"
+		stringSignature = strings.Replace(stringSignature, " ", "+", -1)
 
 		stringPrivateKey := userFrom.PrivateKey
 		if !functions.ValidateSignature(stringPrivateKey, stringSignature) {
