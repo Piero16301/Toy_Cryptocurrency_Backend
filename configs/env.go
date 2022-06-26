@@ -14,7 +14,7 @@ func EnvMongoURI() string {
 	if runtime.GOOS == "windows" {
 		err = godotenv.Load(".env")
 	} else {
-		err = godotenv.Load("/home/piero/Encrypted_Instant_Messaging_Backend/.env")
+		err = godotenv.Load("/home/piero/Toy_Cryptocurrency_Backend/.env")
 	}
 
 	if err != nil {
