@@ -323,7 +323,7 @@ func SendSecurityCodeRegister() http.HandlerFunc {
 func VerifySecurityCodeRegister() http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json; charset=utf-8")
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 		params := mux.Vars(request)
 		securityCode := params["securityCode"]
 		var user models.User
@@ -435,6 +435,40 @@ func VerifySecurityCodeRegister() http.HandlerFunc {
 			return
 		}
 
+		// Zona horaria de Perú
+		timeZone, _ := time.LoadLocation("America/Lima")
+
+		// Si la collección no existe, crear el primer bloque
+		count, _ := blockCollection.CountDocuments(ctx, bson.M{})
+		if count == 0 {
+			firstBlock := models.Block{
+				Id:           primitive.NewObjectID(),
+				Index:        1,
+				PreviousHash: "0",
+				Proof:        0,
+				Timestamp:    time.Now().In(timeZone),
+				Miner:        "0",
+				Signature:    "0",
+				Transaction: models.Transaction{
+					From:   "0",
+					To:     "0",
+					Amount: 0.0,
+					Fee:    0.0,
+				},
+			}
+			_, err = blockCollection.InsertOne(ctx, firstBlock)
+			if err != nil {
+				writer.WriteHeader(http.StatusInternalServerError)
+				response := responses.BlockResponse{
+					Status:  http.StatusInternalServerError,
+					Message: "Error al insertar el primer bloque en la cadena",
+					Data:    err.Error(),
+				}
+				_ = json.NewEncoder(writer).Encode(response)
+				return
+			}
+		}
+
 		// Obtener cadena de bloques de la base de datos
 		var blocks []models.Block
 		results, err := blockCollection.Find(ctx, bson.M{})
@@ -466,7 +500,6 @@ func VerifySecurityCodeRegister() http.HandlerFunc {
 		}
 
 		// Datos de la transacción
-		timeZone, _ := time.LoadLocation("America/Lima")
 		previousBlock := blocks[len(blocks)-1]
 		proofOfWork := functions.GetProofOfWork(previousBlock.Proof)
 		hashPreviousBlock := functions.EncryptSHA256Block(previousBlock)
@@ -476,7 +509,7 @@ func VerifySecurityCodeRegister() http.HandlerFunc {
 		messageHash := sha256.New()
 		_, _ = messageHash.Write(message)
 		messageHashSum := messageHash.Sum(nil)
-		signature, err := rsa.SignPKCS1v15(rand.Reader, privateKey, crypto.SHA256, messageHashSum)
+		signature, _ := rsa.SignPKCS1v15(rand.Reader, privateKey, crypto.SHA256, messageHashSum)
 
 		// Transferir 100.00 a la cuenta del usuario registrado
 		newBlock := models.Block{
