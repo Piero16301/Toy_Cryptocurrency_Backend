@@ -2,13 +2,14 @@ package functions
 
 import (
 	"Toy_Cryptocurrency/models"
-	"github.com/fogleman/gg"
 	"image/color"
 	"io/ioutil"
 	"math/rand"
 	"runtime"
 	"strconv"
 	"time"
+
+	"github.com/fogleman/gg"
 )
 
 func CreateSecurityCode(user models.User) (int, string) {
@@ -27,7 +28,7 @@ func CreateSecurityCode(user models.User) (int, string) {
 	if runtime.GOOS == "windows" {
 		securityCodeTxtRoute = "security_codes/users_codes_texts/" + user.Email + ".txt"
 	} else {
-		securityCodeTxtRoute = "/home/piero/Encrypted_Instant_Messaging_Backend/security_codes/users_codes_texts/" + user.Email + ".txt"
+		securityCodeTxtRoute = "/home/piero/Toy_Cryptocurrency_Backend/security_codes/users_codes_texts/" + user.Email + ".txt"
 	}
 	err := ioutil.WriteFile(securityCodeTxtRoute, securityCode, 0777)
 	if err != nil {
@@ -39,7 +40,7 @@ func CreateSecurityCode(user models.User) (int, string) {
 	if runtime.GOOS == "windows" {
 		securityCodeImageRoute = "security_codes/base_image.jpg"
 	} else {
-		securityCodeImageRoute = "/home/piero/Encrypted_Instant_Messaging_Backend/security_codes/base_image.jpg"
+		securityCodeImageRoute = "/home/piero/Toy_Cryptocurrency_Backend/security_codes/base_image.jpg"
 	}
 	bgImage, err := gg.LoadImage(securityCodeImageRoute)
 	if err != nil {
@@ -53,7 +54,7 @@ func CreateSecurityCode(user models.User) (int, string) {
 	if runtime.GOOS == "windows" {
 		securityCodeFontRoute = "security_codes/amasis_MT_bold.ttf"
 	} else {
-		securityCodeFontRoute = "/home/piero/Encrypted_Instant_Messaging_Backend/security_codes/amasis_MT_bold.ttf"
+		securityCodeFontRoute = "/home/piero/Toy_Cryptocurrency_Backend/security_codes/amasis_MT_bold.ttf"
 	}
 	if err := dc.LoadFontFace(securityCodeFontRoute, 200); err != nil {
 		return 3, ""
@@ -67,7 +68,7 @@ func CreateSecurityCode(user models.User) (int, string) {
 	if runtime.GOOS == "windows" {
 		securityCodeUserImageRoute = "security_codes/users_codes_images/" + user.Email + ".png"
 	} else {
-		securityCodeUserImageRoute = "/home/piero/Encrypted_Instant_Messaging_Backend/security_codes/users_codes_images/" + user.Email + ".png"
+		securityCodeUserImageRoute = "/home/piero/Toy_Cryptocurrency_Backend/security_codes/users_codes_images/" + user.Email + ".png"
 	}
 	_ = dc.SavePNG(securityCodeUserImageRoute)
 

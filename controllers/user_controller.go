@@ -158,7 +158,7 @@ func VerifySecurityCodeLogin() http.HandlerFunc {
 		if runtime.GOOS == "windows" {
 			securityCodeTxtRoute = "security_codes/users_codes_texts/" + user.Email + ".txt"
 		} else {
-			securityCodeTxtRoute = "/home/piero/Encrypted_Instant_Messaging_Backend/security_codes/users_codes_texts/" + user.Email + ".txt"
+			securityCodeTxtRoute = "/home/piero/Toy_Cryptocurrency_Backend/security_codes/users_codes_texts/" + user.Email + ".txt"
 		}
 		securityCodeFile, err := ioutil.ReadFile(securityCodeTxtRoute)
 		if err != nil {
@@ -189,7 +189,7 @@ func VerifySecurityCodeLogin() http.HandlerFunc {
 		if runtime.GOOS == "windows" {
 			securityCodeImageRoute = "security_codes/users_codes_images/" + user.Email + ".png"
 		} else {
-			securityCodeImageRoute = "/home/piero/Encrypted_Instant_Messaging_Backend/security_codes/users_codes_images/" + user.Email + ".png"
+			securityCodeImageRoute = "/home/piero/Toy_Cryptocurrency_Backend/security_codes/users_codes_images/" + user.Email + ".png"
 		}
 		_ = os.Remove(securityCodeTxtRoute)
 		err = os.Remove(securityCodeImageRoute)
@@ -346,7 +346,7 @@ func VerifySecurityCodeRegister() http.HandlerFunc {
 		if runtime.GOOS == "windows" {
 			securityCodeTxtRoute = "security_codes/users_codes_texts/" + user.Email + ".txt"
 		} else {
-			securityCodeTxtRoute = "/home/piero/Encrypted_Instant_Messaging_Backend/security_codes/users_codes_texts/" + user.Email + ".txt"
+			securityCodeTxtRoute = "/home/piero/Toy_Cryptocurrency_Backend/security_codes/users_codes_texts/" + user.Email + ".txt"
 		}
 		securityCodeFile, err := ioutil.ReadFile(securityCodeTxtRoute)
 		if err != nil {
@@ -377,7 +377,7 @@ func VerifySecurityCodeRegister() http.HandlerFunc {
 		if runtime.GOOS == "windows" {
 			securityCodeImageRoute = "security_codes/users_codes_images/" + user.Email + ".png"
 		} else {
-			securityCodeImageRoute = "/home/piero/Encrypted_Instant_Messaging_Backend/security_codes/users_codes_images/" + user.Email + ".png"
+			securityCodeImageRoute = "/home/piero/Toy_Cryptocurrency_Backend/security_codes/users_codes_images/" + user.Email + ".png"
 		}
 		_ = os.Remove(securityCodeTxtRoute)
 		err = os.Remove(securityCodeImageRoute)
