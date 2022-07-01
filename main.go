@@ -1,7 +1,6 @@
 package main
 
 import (
-	"Toy_Cryptocurrency/configs"
 	"Toy_Cryptocurrency/routes"
 	"log"
 	"net/http"
@@ -11,9 +10,6 @@ import (
 
 func main() {
 	router := mux.NewRouter()
-
-	// Establecer conexión con MongoDB
-	configs.ConnectDB()
 
 	// Rutas de Blockchain
 	routes.BlockRoute(router)

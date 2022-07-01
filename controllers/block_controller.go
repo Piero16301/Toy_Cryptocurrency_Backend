@@ -19,6 +19,7 @@ import (
 )
 
 var blockCollection = configs.GetCollection(configs.DB, "Blockchain")
+var blockCollectionReplica = configs.GetCollection(configs.DBBlock, "Blockchain")
 var validateTransaction = validator.New()
 
 func NewTransaction() http.HandlerFunc {
@@ -143,6 +144,22 @@ func NewTransaction() http.HandlerFunc {
 		// Se inserta nuevo bloque en la base de datos
 		_, err = blockCollection.InsertOne(ctx, newBlock)
 		if err != nil {
+			writer.WriteHeader(http.StatusInternalServerError)
+			response := responses.BlockResponse{
+				Status:  http.StatusInternalServerError,
+				Message: "Error al insertar nuevo bloque en la cadena",
+				Data:    err.Error(),
+			}
+			_ = json.NewEncoder(writer).Encode(response)
+			return
+		}
+
+		// Se inserta nuevo bloque en la base de datos (réplica)
+		_, err = blockCollectionReplica.InsertOne(ctx, newBlock)
+		if err != nil {
+			// Se elimina el bloque insertado en la base de datos inicial
+			_, _ = blockCollection.DeleteOne(ctx, bson.M{"_id": newBlock.Id})
+
 			writer.WriteHeader(http.StatusInternalServerError)
 			response := responses.BlockResponse{
 				Status:  http.StatusInternalServerError,
