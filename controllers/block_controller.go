@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"reflect"
+	"sort"
 	"strings"
 	"time"
 
@@ -202,7 +204,7 @@ func GetBlockchain() http.HandlerFunc {
 			return
 		}
 
-		// Lectura de resultados de bloques
+		// Lectura de bloques
 		defer func(results *mongo.Cursor, ctx context.Context) {
 			_ = results.Close(ctx)
 		}(results, ctx)
@@ -232,11 +234,12 @@ func GetBlockchain() http.HandlerFunc {
 	}
 }
 
-func ValidateBlockchain() http.HandlerFunc {
+func GetMiners() http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		var blocks []models.Block
+		var miners []models.Miner
 		defer cancel()
 
 		results, err := blockCollection.Find(ctx, bson.M{})
@@ -252,7 +255,7 @@ func ValidateBlockchain() http.HandlerFunc {
 			return
 		}
 
-		// Lectura de resultados de bloques
+		// Lectura de bloques
 		defer func(results *mongo.Cursor, ctx context.Context) {
 			_ = results.Close(ctx)
 		}(results, ctx)
@@ -271,6 +274,146 @@ func ValidateBlockchain() http.HandlerFunc {
 			blocks = append(blocks, singleBlock)
 		}
 
+		// Procesar datos de miners
+		currentMinerIndex := 1
+		totalWork := 0
+		blocksReaded := map[string]models.Miner{}
+		for _, currentBlock := range blocks {
+			if currentBlock.Miner != "0" {
+				if _, ok := blocksReaded[currentBlock.Miner]; !ok {
+					blocksReaded[currentBlock.Miner] = models.Miner{
+						Index:       currentMinerIndex,
+						Name:        currentBlock.Miner,
+						BlocksMined: 1,
+						TotalCoins:  currentBlock.Transaction.Fee,
+						Work:        currentBlock.Proof,
+					}
+					totalWork += currentBlock.Proof
+					currentMinerIndex++
+				} else {
+					if entry, ok := blocksReaded[currentBlock.Miner]; ok {
+						entry.BlocksMined++
+						entry.TotalCoins += currentBlock.Transaction.Fee
+						entry.Work += currentBlock.Proof
+						totalWork += currentBlock.Proof
+						blocksReaded[currentBlock.Miner] = entry
+					}
+				}
+			}
+		}
+
+		// Convertir Work a porcentaje
+		for _, currentMiner := range blocksReaded {
+			currentMiner.WorkPercent = float64(currentMiner.Work) * 100 / float64(totalWork)
+			blocksReaded[currentMiner.Name] = currentMiner
+		}
+
+		// Llenar lista de mineros
+		for _, currentMiner := range blocksReaded {
+			miners = append(miners, currentMiner)
+		}
+
+		// Ordenar por índice
+		sort.Slice(miners, func(i, j int) bool {
+			return miners[i].Index < miners[j].Index
+		})
+
+		writer.WriteHeader(http.StatusOK)
+		response := responses.BlockResponse{
+			Status:  http.StatusOK,
+			Message: "Mineros leídos con éxito",
+			Data:    miners,
+		}
+		_ = json.NewEncoder(writer).Encode(response)
+		fmt.Println("Mineros leídos con éxito")
+	}
+}
+
+func ValidateBlockchain() http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "application/json; charset=utf-8")
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		var blocks []models.Block
+		var blocksReplica []models.Block
+		defer cancel()
+
+		// Lectura de bloques de collección (original)
+		results, err := blockCollection.Find(ctx, bson.M{})
+
+		if err != nil {
+			writer.WriteHeader(http.StatusInternalServerError)
+			response := responses.BlockResponse{
+				Status:  http.StatusInternalServerError,
+				Message: "Error al leer la base de datos",
+				Data:    err.Error(),
+			}
+			_ = json.NewEncoder(writer).Encode(response)
+			return
+		}
+
+		defer func(results *mongo.Cursor, ctx context.Context) {
+			_ = results.Close(ctx)
+		}(results, ctx)
+
+		for results.Next(ctx) {
+			var singleBlock models.Block
+			if err = results.Decode(&singleBlock); err != nil {
+				writer.WriteHeader(http.StatusInternalServerError)
+				response := responses.BlockResponse{
+					Status:  http.StatusInternalServerError,
+					Message: "Error al leer la base de datos",
+					Data:    err.Error(),
+				}
+				_ = json.NewEncoder(writer).Encode(response)
+			}
+			blocks = append(blocks, singleBlock)
+		}
+
+		// Lectura de bloques de collección (réplica)
+		results, err = blockCollectionReplica.Find(ctx, bson.M{})
+
+		if err != nil {
+			writer.WriteHeader(http.StatusInternalServerError)
+			response := responses.BlockResponse{
+				Status:  http.StatusInternalServerError,
+				Message: "Error al leer la base de datos",
+				Data:    err.Error(),
+			}
+			_ = json.NewEncoder(writer).Encode(response)
+			return
+		}
+
+		defer func(results *mongo.Cursor, ctx context.Context) {
+			_ = results.Close(ctx)
+		}(results, ctx)
+
+		for results.Next(ctx) {
+			var singleBlock models.Block
+			if err = results.Decode(&singleBlock); err != nil {
+				writer.WriteHeader(http.StatusInternalServerError)
+				response := responses.BlockResponse{
+					Status:  http.StatusInternalServerError,
+					Message: "Error al leer la base de datos",
+					Data:    err.Error(),
+				}
+				_ = json.NewEncoder(writer).Encode(response)
+			}
+			blocksReplica = append(blocksReplica, singleBlock)
+		}
+
+		// Comprobar que ambos slices sean iguales
+		if !reflect.DeepEqual(blocks, blocksReplica) {
+			writer.WriteHeader(http.StatusInternalServerError)
+			response := responses.BlockResponse{
+				Status:  http.StatusInternalServerError,
+				Message: "La blockchain no es consistente",
+				Data:    false,
+			}
+			_ = json.NewEncoder(writer).Encode(response)
+			return
+		}
+
+		// Verificar que la blockchain es válida
 		previousBlock := blocks[0]
 		blockIndex := 1
 
@@ -280,8 +423,8 @@ func ValidateBlockchain() http.HandlerFunc {
 				writer.WriteHeader(http.StatusInternalServerError)
 				response := responses.BlockResponse{
 					Status:  http.StatusInternalServerError,
-					Message: "El blockchain no es válido",
-					Data:    nil,
+					Message: "La blockchain no es válida",
+					Data:    false,
 				}
 				_ = json.NewEncoder(writer).Encode(response)
 				return
@@ -294,8 +437,8 @@ func ValidateBlockchain() http.HandlerFunc {
 				writer.WriteHeader(http.StatusInternalServerError)
 				response := responses.BlockResponse{
 					Status:  http.StatusInternalServerError,
-					Message: "El blockchain no es válido",
-					Data:    nil,
+					Message: "La blockchain no es válida",
+					Data:    false,
 				}
 				_ = json.NewEncoder(writer).Encode(response)
 				return
@@ -307,8 +450,8 @@ func ValidateBlockchain() http.HandlerFunc {
 		writer.WriteHeader(http.StatusOK)
 		response := responses.BlockResponse{
 			Status:  http.StatusOK,
-			Message: "El blockchain sí es válido",
-			Data:    nil,
+			Message: "La blockchain es válida",
+			Data:    true,
 		}
 		_ = json.NewEncoder(writer).Encode(response)
 		fmt.Println("Bloques validados con éxito")
